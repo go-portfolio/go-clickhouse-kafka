@@ -51,9 +51,9 @@ services:
     tty: true
     stdin_open: true
 
-  consumer:
+  consumer1:
     build:
-      context: ./consumer
+      context: ./consumer1
     depends_on:
       - kafka
       - clickhouse
@@ -62,6 +62,18 @@ services:
     command: ["/bin/sh"]
     tty: true
     stdin_open: true
+
+  consumer2:
+    build:
+      context: ./consumer2
+    depends_on:
+      - kafka
+      - clickhouse
+    networks:
+      - clickhouse-kafka_clickhouse_network
+    command: ["/bin/sh"]
+    tty: true
+    stdin_open: true    
 
 networks:
   clickhouse-kafka_clickhouse_network:

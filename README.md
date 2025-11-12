@@ -1,39 +1,24 @@
 # Проект добавления sql-представлений в kafka для clickhouse в продюсере и считывания их в консумере с помощью sql (пока делается)
 
-## Общая схема работы такова:
+## Общая схема работы:
 Producer  → Consumer 1 → Kafka (topic=events) → ClickHouse Kafka Engine (kafka_input)
-→ Materialized View → MergeTree (events) → Consumer 2 (попробуем поймать из событий ClickHouse)
+→ Materialized View → MergeTree (events) → Consumer 2 (поймаем из событий ClickHouse)
 
 
-## Запуск контейнеров
+## Сборка и запуск контейнеров
+Сборка
+```bash
 docker compose up --build
-
-
-## Сборка образа продюсера
-Перейдите в папку `producer` с Dockerfile и создайте образ:
+```
+Запуск
 ```bash
-    docker build -t go-kafka-producer .
-```    
-
-Запустите продюсер:
-```bash
-docker run --rm --name go-kafka-producer --network clickhouse-kafka_clickhouse_network go-kafka-producer
+docker compose up -d
 ```
 
-## Сборка образа консумера
-Перейдите в папку с Dockerfile для консюмера и создайте образ:
-```bash
-docker build -t go-kafka-consumer .
-```
-
-Запустите консюмера:
-```bash
-docker run --rm --name go-kafka-consumer --network clickhouse-kafka_clickhouse_network go-kafka-consumer
-```
 
 ## Запуск консумера
 ```bash
-docker exec -it clickhouse-kafka-consumer-1 sh
+docker exec -it clickhouse-kafka-consumer1-1 sh
 ```
 В контейнере
 ```bash
