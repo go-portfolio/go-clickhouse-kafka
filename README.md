@@ -24,3 +24,17 @@ docker build -t go-kafka-consumer .
 ```bash
 docker run --rm --name go-kafka-consumer --network clickhouse-kafka_clickhouse_network go-kafka-consumer
 ```
+
+## Запуск консумера
+```bash
+docker exec -it clickhouse-kafka-consumer-1 sh
+
+./consumer
+```
+
+## Запуск продюсера
+```bash
+docker exec -it clickhouse-kafka-producer-1 sh
+
+./producer
+```

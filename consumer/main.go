@@ -1,58 +1,60 @@
 package main
 
 import (
-	"context"  // Import context package
-	"log"
-	"github.com/Shopify/sarama"
-	"github.com/ClickHouse/clickhouse-go/v2"
+	"context"
 	"encoding/json"
+	"log"
+
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/Shopify/sarama"
 )
 
 func main() {
 	// Настройка Kafka
-	kafkaBroker := "kafka:9093" // Брокер Kafka, указанный в Docker Compose
-	topic := "data_topic"        // Топик для получения сообщений
+	kafkaBroker := "kafka:9093" // Брокер Kafka
+	topic := "data_topic"       // Топик
 	groupID := "clickhouse_consumer_group"
 
-	// Создание конфигурации для консюмера
+	// Конфигурация консумера
 	config := sarama.NewConfig()
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
 
-	// Подключение к Kafka как Consumer
+	// Создание consumer group
 	consumer, err := sarama.NewConsumerGroup([]string{kafkaBroker}, groupID, config)
 	if err != nil {
 		log.Fatalf("Ошибка при создании консюмера: %v", err)
 	}
 	defer consumer.Close()
 
-	// Настройка подключения к ClickHouse через Options struct
+	// Подключение к ClickHouse
 	clickhouseOptions := clickhouse.Options{
-		Addr: []string{"clickhouse:9000"}, // Адрес вашего сервера ClickHouse
+		Addr: []string{"clickhouse:9000"},
 		Auth: clickhouse.Auth{
-			Username: "default", // Имя пользователя
-			Password: "",        // Пароль, если необходимо
-			Database: "default", // База данных
+			Username: "default",
+			Password: "",
+			Database: "default",
 		},
-	
 	}
 
-	// Используем clickhouse.Open, передавая Options
 	clickhouseClient, err := clickhouse.Open(&clickhouseOptions)
 	if err != nil {
 		log.Fatalf("Ошибка подключения к ClickHouse: %v", err)
 	}
 
-	// Чтение сообщений из Kafka
+	handler := &ConsumerHandler{client: clickhouseClient}
+
+	// Основной loop для потребления сообщений
+	ctx := context.Background()
 	for {
-		if err := consumer.Consume(nil, []string{topic}, &ConsumerHandler{client: clickhouseClient}); err != nil {
-			log.Fatalf("Ошибка при потреблении сообщений: %v", err)
+		if err := consumer.Consume(ctx, []string{topic}, handler); err != nil {
+			log.Printf("Ошибка при потреблении сообщений: %v", err)
 		}
 	}
 }
 
 // ConsumerHandler - обработчик сообщений
 type ConsumerHandler struct {
-	client clickhouse.Conn // Correct the type here to `clickhouse.Conn`
+	client clickhouse.Conn
 }
 
 func (h *ConsumerHandler) Setup(sarama.ConsumerGroupSession) error   { return nil }
@@ -60,7 +62,6 @@ func (h *ConsumerHandler) Cleanup(sarama.ConsumerGroupSession) error { return ni
 
 func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		// Обрабатываем сообщение
 		var message map[string]interface{}
 		if err := json.Unmarshal(msg.Value, &message); err != nil {
 			log.Printf("Ошибка при десериализации сообщения: %v", err)
@@ -68,7 +69,6 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 		}
 
 		// Вставка в ClickHouse
-		// Use context.Background() as the first argument
 		err := h.client.Exec(context.Background(), `
 			INSERT INTO my_table (id, value) VALUES (?, ?)
 		`, message["id"], message["value"])
@@ -78,6 +78,7 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			continue
 		}
 
+		// Отметка сообщения как обработанного
 		session.MarkMessage(msg, "")
 	}
 	return nil
