@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper:3.4.6
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_ADVERTISED_LISTENER: INSIDE_KAFKA:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_LISTENER_NAME_INTERNAL: INSIDE_KAFKA
+      KAFKA_LISTENER_INTERNAL: INSIDE_KAFKA:9093
+      KAFKA_LISTENER_PORT: 9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+
+  clickhouse:
+    image: yandex/clickhouse-server:latest
+    ports:
+      - "8123:8123"   # HTTP интерфейс
+      - "9000:9000"   # TCP интерфейс
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - clickhouse_network
+
+  producer:
+    build:
+      context: ./producer
+    depends_on:
+      - kafka
+    networks:
+      - clickhouse_network
+
+  consumer:
+    build:
+      context: ./consumer
+    depends_on:
+      - kafka
+      - clickhouse
+    networks:
+      - clickhouse_network
+
+networks:
+  clickhouse_network:
+    driver: bridge
+
+volumes:
+  clickhouse_data:
