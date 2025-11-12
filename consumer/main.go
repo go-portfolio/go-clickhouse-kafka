@@ -1,12 +1,10 @@
-// consumer/main.go
 package main
 
 import (
-	"fmt"
+	"context"  // Import context package
 	"log"
-	"os"
 	"github.com/Shopify/sarama"
-	"github.com/ClickHouse/clickhouse-go"
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"encoding/json"
 )
 
@@ -27,9 +25,19 @@ func main() {
 	}
 	defer consumer.Close()
 
-	// Настройка подключения к ClickHouse
-	clickhouseDSN := "tcp://clickhouse:9000?username=default&password=&database=default"
-	clickhouseClient, err := clickhouse.OpenDirect(clickhouseDSN)
+	// Настройка подключения к ClickHouse через Options struct
+	clickhouseOptions := clickhouse.Options{
+		Addr: []string{"clickhouse:9000"}, // Адрес вашего сервера ClickHouse
+		Auth: clickhouse.Auth{
+			Username: "default", // Имя пользователя
+			Password: "",        // Пароль, если необходимо
+			Database: "default", // База данных
+		},
+	
+	}
+
+	// Используем clickhouse.Open, передавая Options
+	clickhouseClient, err := clickhouse.Open(&clickhouseOptions)
 	if err != nil {
 		log.Fatalf("Ошибка подключения к ClickHouse: %v", err)
 	}
@@ -44,7 +52,7 @@ func main() {
 
 // ConsumerHandler - обработчик сообщений
 type ConsumerHandler struct {
-	client clickhouse.Conn
+	client clickhouse.Conn // Correct the type here to `clickhouse.Conn`
 }
 
 func (h *ConsumerHandler) Setup(sarama.ConsumerGroupSession) error   { return nil }
@@ -60,9 +68,11 @@ func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 		}
 
 		// Вставка в ClickHouse
-		_, err := h.client.Exec(`
+		// Use context.Background() as the first argument
+		err := h.client.Exec(context.Background(), `
 			INSERT INTO my_table (id, value) VALUES (?, ?)
 		`, message["id"], message["value"])
+
 		if err != nil {
 			log.Printf("Ошибка при вставке в ClickHouse: %v", err)
 			continue
