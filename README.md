@@ -1,3 +1,5 @@
+# Проект добавления sql-представлений в kafka для clickhouse в продюсере и считывания их в консумере с помощью sql (пока делается)
+
 ## Запуск контейнеров
 docker compose up --build
 
@@ -28,13 +30,17 @@ docker run --rm --name go-kafka-consumer --network clickhouse-kafka_clickhouse_n
 ## Запуск консумера
 ```bash
 docker exec -it clickhouse-kafka-consumer-1 sh
-
+```
+В контейнере
+```bash
 ./consumer
 ```
 
 ## Запуск продюсера
 ```bash
 docker exec -it clickhouse-kafka-producer-1 sh
-
+```
+В контейнере
+```bash
 ./producer
 ```
