@@ -40,6 +40,18 @@ services:
     networks:
       - clickhouse-kafka_clickhouse_network
 
+  # 👇 Добавляем Tabix
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client:latest
+    container_name: tabix
+    ports:
+      - "8124:80"
+    depends_on:
+      - clickhouse
+    networks:
+      - clickhouse-kafka_clickhouse_network
+
+
   producer:
     build:
       context: ./producer

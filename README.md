@@ -33,3 +33,7 @@ docker exec -it clickhouse-kafka-producer-1 sh
 ```bash
 ./producer
 ```
+
+## Подключение tabix к clickhouse
+http://localhost:8124
+![title](images/login.png)
