@@ -5,8 +5,8 @@
 Сообщения приходят в Kafka, затем потребляются и сохраняются в основной таблице my_table, одновременно создаются события в таблице events.
 
 ## Структура проекта
-Producer  → Kafka (topic=events) → Consumer 1 → Kafka (topic=events) → ClickHouse Kafka Engine (kafka_input)
-→ Materialized View → MergeTree (events) → Consumer 2 (поймаем из событий ClickHouse)
+Producer  → Kafka (topic=events) → Consumer → Kafka (topic=events) → ClickHouse Kafka Engine (kafka_input)
+→ Materialized View → MergeTree (events) → Events Watcher (события ClickHouse)
 
 
 - **producer** – Go-продюсер, который отправляет JSON-сообщения в Kafka-топик `data_topic`.
@@ -17,7 +17,12 @@ Producer  → Kafka (topic=events) → Consumer 1 → Kafka (topic=events) → C
   4. Создаёт запись в `events` для каждого вставленного объекта.
   5. Materialized View `kafka_to_events` автоматически переносит данные из таблицы Kafka Engine `kafka_input` в `events`.
 
-
+- **events_watcher** – Go-приложение, которое наблюдает за событиями в таблице `events` ClickHouse:
+  1. Периодически опрашивает таблицу `events` (например, каждые 3 секунды).
+  2. Выводит информацию о новых событиях в консоль или лог.
+  3. Позволяет отслеживать, какие записи были добавлены в `my_table` и с какими данными.
+  4. Не взаимодействует напрямую с Kafka, работает только с ClickHouse.
+  
 ## Сборка и запуск контейнеров
 Сборка
 ```bash
@@ -28,15 +33,25 @@ docker compose up --build
 docker compose up -d
 ```
 
+## Запуск наблюдателя событий из clickhouse
+```bash
+docker exec -it clickhouse-kafka-events_watcher-1 sh
+```
+В контейнере
+```bash
+./events_watcher
+```
+![title](images/events_watcher.png)
 
 ## Запуск консумера
 ```bash
-docker exec -it clickhouse-kafka-consumer1-1 sh
+docker exec -it clickhouse-kafka-consumer-1 sh
 ```
 В контейнере
 ```bash
 ./consumer
 ```
+![title](images/consumer.png)
 
 ## Запуск продюсера
 ```bash
@@ -46,13 +61,17 @@ docker exec -it clickhouse-kafka-producer-1 sh
 ```bash
 ./producer
 ```
+![title](images/producer.png)
+
 
 ## Подключение tabix к clickhouse
 http://localhost:8124
+
 ![title](images/login.png)
 
 ## UI для Apache Kafka
 http://localhost:8080/
+
 ![title](images/kafka.png)
 
 ## Созданные таблицы
@@ -116,3 +135,4 @@ ORDER BY event_id;
 ## Пример переданных данных в Clickhouse
 http://localhost:8124
 ![title](images/data.png)
+![title](images/kafka_input.png)

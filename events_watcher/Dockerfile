@@ -14,4 +14,4 @@ RUN go mod download
 COPY . .
 
 # Build the Go app
-RUN go build -o consumer main.go
+RUN go build -o events_watcher main.go

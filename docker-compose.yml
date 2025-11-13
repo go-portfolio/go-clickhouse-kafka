@@ -79,9 +79,9 @@ services:
     tty: true
     stdin_open: true
 
-  consumer1:
+  consumer:
     build:
-      context: ./consumer1
+      context: ./consumer
     depends_on:
       - kafka
       - clickhouse
@@ -91,11 +91,10 @@ services:
     tty: true
     stdin_open: true
 
-  consumer2:
+  events_watcher:
     build:
-      context: ./consumer2
+      context: ./events_watcher
     depends_on:
-      - kafka
       - clickhouse
     networks:
       - clickhouse-kafka_clickhouse_network
